@@ -1,75 +1,45 @@
 #include "Image.h"
+#include <limits>
 
 static int call_no = 0;
 static int pixel = 0;
 
 
 
-//void Ray_Tracer(ray& r, std::vector<Hittable*>& objects, std::vector<std::vector<std::pair<Vec3, float>>>& Frame, int depth) {
-//    Frame.resize(objects.size());
-//    std::pair<Vec3, float> p;
-//    ray temp_r = r;
-//    if (call_no == 0) {
-//        for (int j = 0; j != Frame.size(); j++) {
-//            if (objects[j]->Hit(r) && depth!=0) {
-//                if (p.second == 0) {
-//                    p.second = r.origin()[2];
-//                }
-//                Ray_Tracer(r, objects, Frame, depth - 1);
-//                }
-//                p.first = r.colour();
-//                Frame[j].push_back(p);
-//                r = temp_r;
-//            }
-//        call_no = 1;
-//            
-//    }
-//   
-//   
-//   else {
-//        
-//        for (int j = 0; j != Frame.size(); j++) {
-//                objects[j]->Hit(r);
-//                Frame[j][pixel].first += r.colour();
-//                r = temp_r;
-//            
-//           
-//        }
-//
-//    }
-//}
-std::pair<Vec3, float> temp_Frame_data;
-int counter = 0;
-//indicating first bounce
-bool hit = true;
-void Ray_Tracer(ray& r, std::vector<Hittable*>& object, std::vector<std::pair<Vec3, float>>& Frame, int Depth, int object_ID) {
-
-    if (object[object_ID]->Hit(r) && Depth != 0) {
-        if (hit) {
-            temp_Frame_data.second = r.origin()[2];
-            hit = false;
-        }
-      
-        for (int i = 0; i != object.size(); i++) {
-           if (i == object_ID) {
-               continue;
+struct Hit_Record {
+    bool hit = false;
+    ray r;
+    // frame_buffer test
+    float z = std::numeric_limits<float>::infinity();
+};
+int in = 0;
+Hit_Record Current;
+Vec3 Ray_Tracer(ray& r, std::vector<Hittable*>& object, std::vector<Vec3>& Frame, int Depth, int object_Index) {
+    int recursion = --Depth;
+    Current.r = r;
+    float temp_z;
+    ray Original_ray = r;
+    for (auto& i : object) {
+        if (i->Hit(Original_ray)) {
+            // update frame buffer
+            temp_z = (Original_ray.origin() - r.origin()).length();
+            if (temp_z <= Current.z) {
+                Current.z = temp_z;
+                Current.r = Original_ray;
+                Current.hit = true;
             }
-     
-            Ray_Tracer(r, object, Frame, Depth - 1, i);
         }
+        Original_ray = r;
     }
-    
-    else {
-        if (hit) {
-            temp_Frame_data.second = r.origin()[2];
-            hit = false;
-        }
-        temp_Frame_data.first = r.colour();
-        Frame.push_back(temp_Frame_data);
+    if (Current.hit && recursion != 0) {
+        Ray_Tracer(Current.r, object, Frame, recursion, object_Index);
+        
 
+        
     }
-    counter = 0;
-    hit = true;
+    Current.z = std::numeric_limits<float>::infinity();
+    Current.hit = false;
+    return Current.r.colour();
 }
 
 
@@ -91,41 +61,37 @@ Vec3 Red(1.0f, 0.0f, 0.0f);
 //    
 //}
 
-std::vector<std::vector<std::pair<Vec3, float>>> Frame_Data;
+
 //std::vector<std::pair<Vec3, float>> Frame_Data1;
 
-Circles* c1 = new Circles(.5f,Vec3(0, 0, -1.f), Red );
+Circles* c1 = new Circles(.5f,Vec3(0, 0.1f, -1.f), Red );
 //Circles c(.9f, Vec3(0, 0, -1.f), Red + Green);
 Circles* c = new Circles(100.f, Vec3(0, -100.5f, -1.f), Green);
 //Circles c1(100.f, Vec3(0, -100.5f, -1.f), Green);
-Circles* c2 = new Circles(.5f, Vec3(0, 1.0f, -1.f), Green );
-std::vector<Hittable*> shapes = { c1,c };
+Circles* c2 = new Circles(.5f, Vec3(0.5f, 0.0f, -1.f), Red );
+Circles* c3 = new Circles(.5f, Vec3(-.5f, 0.0f, -1.f), Green);
+Circles* c4 = new Circles(.5f, Vec3(-0.5, 0.1f, -1.f), Red);
+std::vector<Hittable*> shapes = { c1, c };
 
 
 
 
 
 Image::Image(const std::string destination, int width, int height, Vec3& colour, int samples) {
-
+    std::vector<Vec3> Frame;
     Canvas.open(destination, std::ios::in);
     if (!Canvas) {
         std::cout << "File does not exist!" << "\n";
     }
-    int counter = 2;
-    Frame_Data.resize(shapes.size());
     Vec3 lower_left(-2, -2, -1);
     Vec3 V_width(4, 0, 0);
     Vec3 V_height(0, 4, 0);
-    Vec3 rgb{};
-    float z_buffer = 0;
-    Vec3 temp_rgb{};
-    std::pair<Vec3, float> colour_buffer;
-    colour_buffer.first = Vec3(0.0, 0.0, 0.0);
-    std::pair<Vec3, float> temp_colour_buffer;
-    int AA = samples-1;
     Vec3 dir;
+    Vec3 Origin(0.0, 0.0, 0.0);
+    Vec3 Starting_Colour = Blue;
     int index = 0;
-    bool flip = true;
+    Vec3 temp_colour;
+    int AA = samples - 1;
     Canvas << "P3\n" << width << ' ' << height << "\n255\n";
 
     for (int j = height; j >= 0; j--) {
@@ -135,12 +101,18 @@ Image::Image(const std::string destination, int width, int height, Vec3& colour,
             u = 4.f * u;
             v = 4.f * v;
             Vec3 dir = Vec3(u, v, 0) + lower_left;
-            ray r(Vec3(0.0, 0.0, 0.0), dir, Vec3(0.0, 0.0, 0.0), false);
-            ray temp_r = r;
-            for (int k = 0; k != shapes.size(); k++) {
-                Ray_Tracer(r, shapes, Frame_Data[k], 10000, k);
-                r = temp_r;
+            ray r(Origin, dir, Vec3(0.0, 0.0, 1.0), false);
+            temp_colour = Ray_Tracer(r, shapes, Frame, 10, index);
+            while (AA!=0)
+            {
+                float temp_u = random_float() / width + u;
+                float temp_v = random_float() / height + v;
+                dir = Vec3(temp_u, temp_v, 0) + lower_left;
+                ray r(Origin, dir, Vec3(0.0, 0.0, 1.0), false);
+                temp_colour += Ray_Tracer(r, shapes, Frame, 10, index);
+                AA--;
             }
+            AA = samples - 1;
             
             /*float temp_u = random_float() + u;
             float temp_v = random_float() + v;*/
@@ -157,40 +129,17 @@ Image::Image(const std::string destination, int width, int height, Vec3& colour,
             //// set n_Call = 0
             //call_no = 0;
             //AA = samples-1;
-
+            temp_colour *= (1.f / samples);
+            temp_colour *= 255.f;
+            temp_colour.clamp(0, 255);
+            Frame.push_back(temp_colour);
+            Canvas << Frame[index++];
+            
                
            
         }
     }    
-float temp_z = 0.f;
-    Vec3 final_colour;
-    for(int j = 0; j < width*height; j++) {
-        for (auto& i : Frame_Data) {
-
-            z_buffer = i[j].second;
-            if (temp_z == 0.f) {
-                temp_z = z_buffer;
-            }
-            
-            if (z_buffer >= temp_z) {
-                z_buffer = i[j].second;
-                temp_z = z_buffer;
-                final_colour = i[j].first;
-            }
 
 
-
-           
-        }
-
-        
-        final_colour *= (1.f / samples);
-        final_colour *= 255;
-        final_colour.clamp(0, 255);
-        
-        temp_z = 0.f;
-        Canvas << final_colour;
-        
-    }
 }
 Image::~Image() { Canvas.close(); }
