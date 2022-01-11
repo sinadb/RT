@@ -104,13 +104,12 @@ class Refractable {
 public:
 
     static ray init_ray(ray r, float solution, Hittable* object) {
-        r.Bounces()++;
+
         // new origin
         r.origin() += r.direction() * solution;
         // Normal 
         Vec3 N = Normal(object->Centre(), r.origin());
-        //avoid delf reflection
-        
+        //avoid delf reflectio
         //reverse direction for consistency throughout code . incident light is now facing away from object
         r.direction() = r.direction() * (-1.f);
             float test = dot(N, r.direction());
@@ -133,6 +132,7 @@ public:
             // create refracted ray but first test that we can refract 
             float Critical = SIN_Theta * rio;
             // only refracting if less than 1
+	    if(Critical < 0){
            
                 Vec3 R_Para = N * -sqrtf(1.f - powf(rio * SIN_Theta, 2));
                 Vec3 R_Perp = (r.direction() - N * dot(N, r.direction())) * (-rio);
@@ -140,22 +140,12 @@ public:
                 r.direction() = R;
                 r.colour() = Vec3(1, 1, 1) * r.colour();
                 //std::cout << "h";
-                return r;
+                return r;}
 
-            
-
-        
-
-        //reset Normal if we are not refracting;
-        //N = N * (-1.f);
-
-           
         r.direction() = N * (2 * (dot(N, r.direction()))) - r.direction();
         //r.colour() = (r.colour()) * (object->Colour() * 0.8f);
         r.colour() = Vec3(1, 1, 1) * r.colour();
         return r;
-
-
     }
 
 };
