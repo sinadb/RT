@@ -627,7 +627,6 @@ struct {
 
 struct Node {
     std::vector<Box> world;
-std::vector<Hittbles*> obj;
     rec m_boundary;
     Node* left;
     Node* right;
@@ -636,14 +635,13 @@ std::vector<Hittbles*> obj;
 
 class BVH {
 private:
-    Node* head;
+    Node head;
 public:
     BVH() { head.left = head.right = head.parent = nullptr; }
     void populate_world(std::vector<Hittable*> primitives) {
         for (auto& i : primitives) {
             Box b(i);
             head.world.push_back(b);
-		head.obj.push_back(i);
             if (head.world.size() > 1) {
                 head.m_boundary.update_box(b.get_rec());
             }
@@ -654,11 +652,9 @@ public:
         std::sort(head.world.begin(), head.world.end(), compare);
         head.left = new Node();
         head.right = new Node();
-	    left.parent =right.parent = head;
         int mid = primitives.size() / 2;
         for (int i = 0; i != mid; i++) {
             head.left->world.push_back(head.world[i]);
-		head.left.obj.push_back(primitives[i]);
             if (head.world.size() > 1) {
                 head.left->m_boundary.update_box(head.world[i].get_rec());
             }
@@ -668,7 +664,6 @@ public:
         }
         for (int i = mid; i != primitives.size(); i++) {
             head.right->world.push_back(head.world[i]);
-		head.left.obj.push_back(primitives[i]);
             if (head.world.size() > 1) {
                 head.right->m_boundary.update_box(head.world[i].get_rec());
             }
@@ -676,9 +671,6 @@ public:
                 head.right->m_boundary = head.world[i].get_rec();
             }
         }
-	    while(left.obj.size()!=1 || right.obj.size()!=1){
-		    
-	    }
     }
 };
 
