@@ -659,6 +659,7 @@ void sort_boxes(std::vector<Box>& data){
 class BVH {
 private:
     Node* head;
+	std::vector<Hittables*> hitted_objects;
 public:
     BVH() { head.left = head.right = head.parent = nullptr; }
     void populate_world(std::vector<Box>& objects) {
@@ -704,6 +705,42 @@ public:
     }
     return head;
     }
+void Traverse_BT(const ray& r){
+  
+  Node* temp = new Node();
+  temp = head;
+	bool hit_left;
+	bool hit_right;
+	bool hit= true;
+  if(temp->parent==nullptr){
+    hit = temp->m_boundary.hit(r);
+	  
+  }
+	if(hit){
+  if(temp->left!=nullptr){
+    hit_left = temp->left->m_boundary.hit(r);
+  }
+  if(temp->right!=nullptr){
+    hit_left = temp->right->m_boundary.hit(r);
+  }
+    Node* temp_l = new Node();
+    Node* temp_r = new Node();
+    if(temp->left!=nullptr && hit_left){
+    temp_l = temp->left;
+    Traverse_BT(temp_l);
+    }
+	else if(temp->left==nullptr && hit_left){
+		hitted_objects.push_back(temp.world[0]);
+	}
+    if(temp->right!=nullptr && hit_right){
+    temp_r = temp->right;
+    Traverse_BT(temp_r);
+    }
+	else if(temp->left==nullptr && hit_right){
+		hitted_objects.push_back(temp.world[0]);
+	}
+	}
+}
 };
 void split_vector(std::vector<std::vector<Box>>& result,std::vector<Box>& world){
  int end = world.size();
