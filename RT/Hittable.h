@@ -626,7 +626,7 @@ struct {
 }compare;
 
 struct Node {
-    std::vector<Box> world;
+    std::vector<Hittables*> world;
     rec m_boundary;
     Node* left;
     Node* right;
@@ -635,42 +635,46 @@ struct Node {
 
 class BVH {
 private:
-    Node head;
+    Node* head;
 public:
     BVH() { head.left = head.right = head.parent = nullptr; }
-    void populate_world(std::vector<Hittable*> primitives) {
-        for (auto& i : primitives) {
-            Box b(i);
-            head.world.push_back(b);
-            if (head.world.size() > 1) {
-                head.m_boundary.update_box(b.get_rec());
-            }
-            else {
-                head.m_boundary = b.get_rec();
-            }
+    void populate_world(std::vector<Hittables*>& objects) {
+        if(head == nullptr){
+      head = new Node();
+      head->world = objects;
+      head->parent = nullptr;
+      //left leaf
+    }
+    else{
+      Node* current = new Node();
+      current = head;
+      while(current!=nullptr){
+        if( compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->left!=nullptr){
+          current = current->left;
         }
-        std::sort(head.world.begin(), head.world.end(), compare);
-        head.left = new Node();
-        head.right = new Node();
-        int mid = primitives.size() / 2;
-        for (int i = 0; i != mid; i++) {
-            head.left->world.push_back(head.world[i]);
-            if (head.world.size() > 1) {
-                head.left->m_boundary.update_box(head.world[i].get_rec());
-            }
-            else {
-                head.left->m_boundary = head.world[i].get_rec();
-            }
+        else if(compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->left==nullptr){
+          Node* temp = new Node();
+          temp->parent = current;
+          current->left = temp;
+          temp->world = objects;
+          temp->left = temp->right = nullptr;
+          break;
         }
-        for (int i = mid; i != primitives.size(); i++) {
-            head.right->world.push_back(head.world[i]);
-            if (head.world.size() > 1) {
-                head.right->m_boundary.update_box(head.world[i].get_rec());
-            }
-            else {
-                head.right->m_boundary = head.world[i].get_rec();
-            }
+        if(!compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->right!=nullptr){
+          current = current->right;
         }
+        else if(!compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->right==nullptr){
+          Node* temp = new Node();
+          temp->parent = current;
+          current->right = temp;
+          temp->world = objects;
+          temp->left = temp->right = nullptr;
+          break;
+        }
+        
+      }
+    }
+    return head;
     }
 };
 
