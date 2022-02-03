@@ -578,11 +578,11 @@ private :
     Hittable* m_obj;
 public:
     Box() { m_bounds.min = Vec3(-INF, -INF, -INF); m_bounds.max = Vec3(INF, INF, INF); }
-    Box(Hittable* object) {
+    Box(std::vector<Hittable*> object) {
         m_bounds.min = object->Centre() - object->radius();
         m_bounds.max = object->Centre() + object->radius();
        m_obj = object;
-
+	
        // sort my min and max 
        for (int i = 0; i != 3; i++) {
            if (m_bounds.min[i] > m_bounds.max[i]) {
@@ -590,6 +590,7 @@ public:
            }
        }
     }
+	
    
     Vec3 get_min() { return m_bounds.min; }
     Vec3 get_max() { return m_bounds.max; }
@@ -620,54 +621,81 @@ public:
 };
 
 struct {
-    bool operator()(const rec& a, const rec& b) {
-        return a.min[0] <= b.min[0];
+    bool operator()(const Box& a, const Box& b) {
+        return a.get_min[0] <= b.get_min[0];
     }
 }compare;
 
 struct Node {
-    std::vector<Hittables*> world;
+    std::vector<Box> world;
     rec m_boundary;
     Node* left;
     Node* right;
     Node* parent;
+	Node(){
+		for(int i=0 ; i!=3; i++){
+			m_boundary.min[i] = INF;
+			m_boundary.max[i] = -INF;
+		}
+	}
+	void update_boundary(){
+	for(int i = 0; i!=world.size(); i++){
+		m_boundary.min[0] = std::min(m_boundary.min[0],world[i].get_rec[0]);
+		m_boundary.min[1] = std::min(m_boundary.min[1],world[i].get_rec[1]);
+		m_boundary.min[2] = std::min(m_boundary.min[2],world[i].get_rec[2]);
+		m_boundary.max[0] = std::max(m_boundary.min[0],world[i].get_rec[0]);
+		m_boundary.max[1] = std::max(m_boundary.min[1],world[i].get_rec[1]);
+		m_boundary.max[2] = std::max(m_boundary.min[2],world[i].get_rec[2]);
+	}
+	}
+	
+	
 };
+
+void sort_boxes(std::vector<Box>& data){
+		std::sort(data.begin(),data.end(),compare);
+	}
 
 class BVH {
 private:
     Node* head;
 public:
     BVH() { head.left = head.right = head.parent = nullptr; }
-    void populate_world(std::vector<Hittables*>& objects) {
+    void populate_world(std::vector<Box>& objects) {
         if(head == nullptr){
       head = new Node();
       head->world = objects;
+	head->update_boundary();
       head->parent = nullptr;
+	head->left = nullptr;
+	head->right = nullptr;
       //left leaf
     }
     else{
       Node* current = new Node();
       current = head;
       while(current!=nullptr){
-        if( compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->left!=nullptr){
+        if( compare(objects[0].get_min(),current.world[current.world.size()/2].get_min()) && current->left!=nullptr){
           current = current->left;
         }
-        else if(compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->left==nullptr){
+        else if(compare(objects[0].get_min(),current.world[current.world.size()/2].get_min()) && current->left==nullptr){
           Node* temp = new Node();
           temp->parent = current;
           current->left = temp;
           temp->world = objects;
+		temp->update_boundary();
           temp->left = temp->right = nullptr;
           break;
         }
-        if(!compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->right!=nullptr){
+        if(!compare(objects[0].get_min(),current.world[current.world.size()/2].get_min()) && current->right!=nullptr){
           current = current->right;
         }
-        else if(!compare(objects[0].get_rec(),current->world[current->world.size()/2].get_rec()) && current->right==nullptr){
+        else if(!compare(objects[0].get_min(),current.world[current.world.size()/2].get_min()) && current->right==nullptr){
           Node* temp = new Node();
           temp->parent = current;
           current->right = temp;
           temp->world = objects;
+		temp->update_boundary();
           temp->left = temp->right = nullptr;
           break;
         }
