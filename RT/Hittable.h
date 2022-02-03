@@ -705,5 +705,44 @@ public:
     return head;
     }
 };
+void split_vector(std::vector<std::vector<Box>>& result,std::vector<Box>& world){
+ int end = world.size();
+ int mid = end/2;
+ if(result.size()==0){
+   result.push_back(world);
+ }
+ std::vector<Box> left;
+ std::vector<Box> right;
+ for(int i = 0; i!= mid; i++){
+   left.push_back(world[i]);
+   
+  
+ }
+  result.push_back(left);
+ for(int i = mid; i!=end; i++){
+   right.push_back(world[i]);
+   
+
+ }
+ result.push_back(right);
+ if(mid>1 && left.size()!=1){
+   split_vector(result,left);
+ }
+ if(end > 1 && right.size()!=1){
+   split_vector(result,right);
+ }
+ 
+ 
+};
+Node* init_BVH(std::vector<Box>& data, BVH& bvh){
+  std::vector<std::vector<Box>> result;
+  split_vector(result, data);
+  Node* head = new Node();
+  for(auto& i : result){
+    head = BT.extend_list(i);
+  }
+  return head;
+  
+}
 
 
