@@ -801,32 +801,59 @@ public:
         s4 = xz_rect(min[0], max[0], min[2], max[2], max[1], colour, emission);
     }
     Hit_Record Hit(ray r) {
+        // if we have two valid hits then we should stop testing.
+        // we need a travelled length variable for fog/volumes
+        int count = 0;
+        Hit_record first_valid_hit;
+        float distance_ray_trvaelled = 0;
         Hit_Record current;
         current.r = r;
         // go through all side and find the hit with smallest intersection
         Hit_Record temp = this->s0.Hit(r);
         if (temp.hit) {
+            count++;
             current = temp;
+            first_valid_hit = temp;
         }
         temp = this->s1.Hit(r);
         if (temp.hit && temp.z < current.z) {
+            count++
             current = temp;
+            if(count==2){
+                distance_ray_travelled = (current.r.origin() - first_valid_hit.r.origin()).length();
+                return current;}
         }
         temp = this->s2.Hit(r);
         if (temp.hit && temp.z < current.z) {
+            count++
             current = temp;
+            if(count==2){
+                 distance_ray_travelled = (current.r.origin() - first_valid_hit.r.origin()).length();
+                return current;}
         }
         temp = this->s3.Hit(r);
         if (temp.hit && temp.z < current.z) {
+            count++
             current = temp;
+            if(count==2){
+                 distance_ray_travelled = (current.r.origin() - first_valid_hit.r.origin()).length();
+                return current;}
         }
         temp = this->s4.Hit(r);
         if (temp.hit && temp.z < current.z) {
+            count++
             current = temp;
+            if(count==2){
+                 distance_ray_travelled = (current.r.origin() - first_valid_hit.r.origin()).length();
+                return current;}
         }
         temp = this->s5.Hit(r);
         if (temp.hit && temp.z < current.z) {
+            count++
             current = temp;
+            if(count==2){
+                 distance_ray_travelled = (current.r.origin() - first_valid_hit.r.origin()).length();
+                return current;}
         }
         return current;
 
